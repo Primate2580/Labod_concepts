@@ -5,7 +5,7 @@ const projects = [
   {
     id: "labod-concepts",
     title: "Labod Concepts",
-    location: "California, USA",
+    location: "Lagos, Nigeria",
     category: "Interior",
     year: 2025,
     sqft: 3672,

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import DrawnTitle from "../components/DrawnTitle.jsx";
 import projects from "../data/projects.js";
 import services from "../data/services.js";
 
@@ -18,10 +19,7 @@ function Hero({ project }) {
       <div className="pointer-events-none absolute inset-3 rounded-3xl border border-white/70 md:inset-5" />
 
       <div className="absolute inset-x-0 bottom-28 px-6 text-center md:bottom-32">
-        <h1 className="font-display break-words text-[clamp(2.25rem,10vw,9rem)] font-extrabold uppercase leading-[0.85]">
-          {project.title}
-        </h1>
-        <p className="mt-5 text-base text-white/90">{project.location}</p>
+        <DrawnTitle title={project.title} location={project.location} />
       </div>
 
       <div className="absolute inset-x-0 bottom-0 flex justify-between px-7 pb-7 md:px-14 md:pb-12">

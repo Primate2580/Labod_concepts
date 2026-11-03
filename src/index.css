@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Hero title: letters trace their outline, then fill in */
+.draw-letter {
+  fill: transparent;
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-dasharray: 2500;
+  stroke-dashoffset: 2500;
+  animation:
+    draw 1s cubic-bezier(0.45, 0.05, 0.35, 1) var(--d) forwards,
+    fillin 0.6s ease calc(var(--d) + 0.85s) forwards;
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes fillin { to { fill: #fff; } }
+
+.fade-up { animation: fadeup 0.8s ease forwards; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Respect "reduce motion": show the finished title immediately */
+@media (prefers-reduced-motion: reduce) {
+  .draw-letter { animation: none; fill: #fff; stroke: none; stroke-dashoffset: 0; }
+  .fade-up { animation: none; opacity: 1 !important; }
+}
