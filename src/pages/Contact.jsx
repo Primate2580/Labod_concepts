@@ -26,7 +26,7 @@ export default function Contact() {
         <h1 className="sr-only">Contact</h1>
         <p className="text-white/70">Tell us about your project and we will reply within two working days.</p>
         <div className="mt-8 space-y-1 text-white/80">
-          <p>hello@labod.com</p><p>+234 000 000 0000</p><p>Studio address, City, Country</p>
+          <p>larryaboderin@gmail.com</p><p>+234 80 6904 9291</p><p>Ibadan, Oyo State, Nigeria</p>
         </div>
         <div className="mt-8 flex aspect-video items-center justify-center bg-white/5 text-sm text-white/40">Map goes here</div>
       </div>

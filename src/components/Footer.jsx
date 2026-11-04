@@ -13,8 +13,8 @@ export default function Footer() {
           ))}
         </ul>
         <div className="text-sm text-white/70">
-          <p>hello@labod.com</p>
-          <p>+234 000 000 0000</p>
+          <p>larryaboderin@gmail.com</p>
+          <p>+234 80 6904 9291</p>
           <p className="mt-6 text-white/40">© {new Date().getFullYear()} LABOD Architecture</p>
         </div>
       </div>
