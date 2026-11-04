@@ -15,7 +15,7 @@ export default function Footer() {
         <div className="text-sm text-white/70">
           <p>larryaboderin@gmail.com</p>
           <p>+234 80 6904 9291</p>
-          <p className="mt-6 text-white/40">© {new Date().getFullYear()} LABOD Architecture</p>
+          <p className="mt-6 text-white/40">© {new Date().getFullYear()} Design by Primeswitch</p>
         </div>
       </div>
     </footer>
