@@ -200,7 +200,15 @@ export default function ProjectForm({ project, onDone, onCancel }) {
         const paths = uploaded.filter((u) => u.bucket === bucket).map((u) => u.path);
         if (paths.length) await supabase.storage.from(bucket).remove(paths);
       }
-      setError(`Nothing was saved. Check your internet connection and try again. (${err.message || "unknown error"})`);
+      const m = (err.message || "").toLowerCase();
+      const hint =
+        m.includes("row-level security") ? "The email you signed in with is not the admin email set in setup.sql, or setup.sql was not run. "
+        : m.includes("bucket not found") ? "The storage buckets are missing: run supabase/setup.sql. "
+        : m.includes("maximum allowed size") || m.includes("too large") ? "A file is bigger than 50 MB. "
+        : m.includes("jwt") || m.includes("not authenticated") ? "You were signed out: sign in again. "
+        : m.includes("failed to fetch") ? "No connection to Supabase: check your internet and the two VITE_SUPABASE values on Vercel. "
+        : "";
+      setError(`Nothing was saved. ${hint}(${err.message || "unknown error"})`);
     } finally {
       setBusy(false);
       setStatus("");
