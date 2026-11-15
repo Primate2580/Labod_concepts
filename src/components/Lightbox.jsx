@@ -44,6 +44,16 @@ export default function Lightbox({ project, index, setIndex, onClose }) {
       <img src={images[index]} alt={`${title}, photo ${index + 1} of ${total}`}
         onClick={(e) => e.stopPropagation()}
         className="max-h-[78vh] max-w-[92vw] object-contain" />
+      {project.floorPlans?.length > 0 && (
+        <div className="absolute inset-x-0 bottom-5 flex flex-wrap justify-center gap-3 px-4" onClick={(e) => e.stopPropagation()}>
+          {project.floorPlans.map((fp) => (
+            <a key={fp.url} href={fp.url} target="_blank" rel="noreferrer"
+              className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-xs uppercase backdrop-blur-md hover:bg-white/20">
+              Floor plan: {fp.name}
+            </a>
+          ))}
+        </div>
+      )}
       {total > 1 && (
         <>
           <button onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous photo" className={`${btn} left-4`}>

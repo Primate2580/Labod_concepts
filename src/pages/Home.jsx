@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import DrawnTitle from "../components/DrawnTitle.jsx";
 import projects from "../data/projects.js";
+import useProjects from "../hooks/useProjects.js";
 import services from "../data/services.js";
 
 // Hero is driven by the first project in projects.js
@@ -31,6 +32,7 @@ function Hero({ project }) {
 }
 
 export default function Home() {
+  const { projects: all } = useProjects(); // hero uses the first sample; featured uses everything
   return (
     <>
       <Hero project={projects[0]} />
@@ -47,7 +49,7 @@ export default function Home() {
           <Link to="/projects" className="text-sm underline underline-offset-4">All projects</Link>
         </div>
         <div className="mt-10 grid gap-8 md:grid-cols-3">
-          {projects.slice(0, 3).map((p) => (
+          {all.slice(0, 3).map((p) => (
             <Link key={p.id} to="/projects" className="group block">
               <div className="aspect-[4/3] overflow-hidden bg-white/5">
                 <img src={p.cover} alt={`${p.title}, ${p.location}`} loading="lazy"

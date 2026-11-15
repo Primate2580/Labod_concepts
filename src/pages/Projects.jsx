@@ -1,9 +1,10 @@
 import { useState, useCallback } from "react";
-import projects from "../data/projects.js";
+import useProjects from "../hooks/useProjects.js";
 import ProjectCard from "../components/ProjectCard.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 
 export default function Projects() {
+  const { projects } = useProjects();
   // Filters are generated from the data, so new categories appear automatically
   const categories = ["All", ...new Set(projects.map((p) => p.category))];
   const [filter, setFilter] = useState("All");
