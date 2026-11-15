@@ -270,7 +270,7 @@ export default function ProjectForm({ project, onDone, onCancel }) {
               {i === 0 && <span className="absolute left-2 top-2 rounded-full bg-brand-yellow px-2 py-0.5 text-[10px] font-bold uppercase text-black">Cover</span>}
               <div className="mt-1 flex justify-between text-[11px] uppercase">
                 {i !== 0 ? <button type="button" onClick={() => makeCover(p.key)} className="text-brand-yellow">Make cover</button> : <span />}
-                <button type="button" onClick={drop(setPhotos)(p.key)} className="text-amber">Remove</button>
+                <button type="button" onClick={() => drop(setPhotos)(p.key)} className="text-amber">Remove</button>
               </div>
             </div>
           ))}
