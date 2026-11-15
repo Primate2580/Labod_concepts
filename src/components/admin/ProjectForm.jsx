@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase, PUBLIC_BUCKET as PUB, PRIVATE_BUCKET as PRIV, MAX_FILE_MB, pathFromUrl } from "../../lib/supabase.js";
 import useProjects from "../../hooks/useProjects.js";
 
-const PHOTO_EXT = ["jpg", "jpeg", "png", "webp"];
+const PHOTO_EXT = ["jpg", "jpeg", "jfif", "png", "webp", "avif"];
+const PHOTO_MIME = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const SOURCE_EXT = ["dwg", "dxf", "rvt", "pcp"];
 
 const lbl = "mb-1 block text-sm text-white/70";
@@ -14,18 +15,23 @@ const fileInp = "block w-full text-sm text-white/70 file:mr-4 file:rounded-full 
 const uid = () => Math.random().toString(36).slice(2);
 const extOf = (f) => f.name.split(".").pop().toLowerCase();
 
-// Phone photos are huge: shrink to 2200px JPEG so the website stays fast.
-async function shrink(file) {
+// Big phone photos are shrunk to 2200px JPEG so the website stays fast.
+// Small photos, or any photo that cannot be shrunk, are uploaded exactly as they are.
+async function prepare(file) {
+  const ext = { jpeg: "jpg", jfif: "jpg" }[extOf(file)] || extOf(file);
+  const keep = { body: file, ext, type: file.type || "image/jpeg" };
   try {
     const bmp = await createImageBitmap(file);
     const s = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+    if (s === 1 && file.size < 1.5 * 1024 * 1024) return keep;
     const c = document.createElement("canvas");
     c.width = Math.round(bmp.width * s);
     c.height = Math.round(bmp.height * s);
     c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-    return (await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85))) || file;
+    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85));
+    return blob && blob.size > 0 && blob.size < file.size ? { body: blob, ext: "jpg", type: "image/jpeg" } : keep;
   } catch {
-    return file;
+    return keep;
   }
 }
 
@@ -95,6 +101,7 @@ export default function ProjectForm({ project, onDone, onCancel }) {
   const [plans, setPlans] = useState(() => (project?.floorPlans || []).map((p, i) => ({ key: "e" + i, name: p.name, url: p.url })));
   const [sources, setSources] = useState(() => (project?.sourceFiles || []).map((s, i) => ({ key: "e" + i, name: s.name, path: s.path })));
   const [error, setError] = useState("");
+  const [photoMsg, setPhotoMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [percent, setPercent] = useState(0);
@@ -115,16 +122,23 @@ export default function ProjectForm({ project, onDone, onCancel }) {
     setSaved((s) => ({ ...s, [kind]: [...s[kind], name] }));
   };
 
-  // Accept only allowed types and sizes; tell the client what was skipped
-  const pick = (allowed, setter, make) => (e) => {
-    const skipped = [];
-    const ok = [...e.target.files].filter((file) => {
-      if (!allowed.includes(extOf(file))) { skipped.push(`${file.name} (file type not allowed)`); return false; }
-      if (file.size > MAX_FILE_MB * 1024 * 1024) { skipped.push(`${file.name} (over ${MAX_FILE_MB} MB)`); return false; }
-      return true;
-    });
-    setter((prev) => [...prev, ...ok.map(make)]);
-    setError(skipped.length ? `Skipped: ${skipped.join(", ")}` : "");
+  // Accept only allowed types and sizes; say clearly what was added and what was skipped
+  const pick = (allowed, setter, make, report = setError, mimes = []) => (e) => {
+    try {
+      const skipped = [];
+      const ok = [...e.target.files].filter((file) => {
+        const ext = extOf(file);
+        if (ext === "heic" || ext === "heif") { skipped.push(`${file.name} (HEIC is not supported, save it as JPG first)`); return false; }
+        if (!allowed.includes(ext) && !mimes.includes(file.type)) { skipped.push(`${file.name} (this file type is not allowed)`); return false; }
+        if (file.size > MAX_FILE_MB * 1024 * 1024) { skipped.push(`${file.name} (over ${MAX_FILE_MB} MB)`); return false; }
+        return true;
+      });
+      setter((prev) => [...prev, ...ok.map(make)]);
+      report(skipped.length ? `Skipped: ${skipped.join(", ")}` : "");
+    } catch (err) {
+      console.error(err);
+      report(`The file could not be read: ${err.message}`);
+    }
     e.target.value = "";
   };
   const drop = (setter) => (key) => setter((x) => x.filter((i) => i.key !== key));
@@ -154,15 +168,20 @@ export default function ProjectForm({ project, onDone, onCancel }) {
         const { kind, item } = jobs[i];
         setStatus(`Uploading file ${i + 1} of ${jobs.length}: ${item.file.name}`);
         setPercent(Math.round((i / jobs.length) * 100));
-        const body = kind === "photo" ? await shrink(item.file) : item.file;
+        const prep = kind === "photo" ? await prepare(item.file) : { body: item.file, ext: extOf(item.file), type: item.file.type || "application/octet-stream" };
         const safe = item.file.name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9]+/gi, "-").slice(0, 40) || "file";
-        const ext = kind === "photo" ? "jpg" : extOf(item.file);
         const bucket = kind === "source" ? PRIV : PUB;
-        const path = `${id}/${folder[kind]}/${Date.now()}-${i}-${safe}.${ext}`;
-        const { error: upErr } = await supabase.storage.from(bucket).upload(path, body, {
-          contentType: kind === "photo" ? "image/jpeg" : item.file.type || "application/octet-stream",
-        });
-        if (upErr) throw upErr;
+        const send = async (pr) => {
+          const path = `${id}/${folder[kind]}/${Date.now()}-${i}-${safe}.${pr.ext}`;
+          const { error } = await supabase.storage.from(bucket).upload(path, pr.body, { contentType: pr.type });
+          return { error, path };
+        };
+        let res = await send(prep);
+        if (res.error && kind === "photo" && prep.body !== item.file) {
+          res = await send({ body: item.file, ext: extOf(item.file), type: item.file.type || "image/jpeg" });
+        }
+        if (res.error) throw new Error(`${item.file.name}: ${res.error.message}`);
+        const path = res.path;
         uploaded.push({ bucket, path });
         done[item.key] = kind === "source" ? path : supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
       }
@@ -240,8 +259,10 @@ export default function ProjectForm({ project, onDone, onCancel }) {
 
       <div>
         <label className={lbl}>Photos <span className="text-white/40">(JPG, PNG or WEBP. The first photo is the cover)</span></label>
-        <input type="file" multiple accept=".jpg,.jpeg,.png,.webp" className={fileInp}
-          onChange={pick(PHOTO_EXT, setPhotos, (file) => ({ key: uid(), url: URL.createObjectURL(file), file }))} />
+        <input type="file" multiple accept=".jpg,.jpeg,.jfif,.png,.webp,.avif,image/jpeg,image/png,image/webp,image/avif" className={fileInp}
+          onChange={pick(PHOTO_EXT, setPhotos, (file) => ({ key: uid(), url: URL.createObjectURL(file), file }), setPhotoMsg, PHOTO_MIME)} />
+        {photoMsg && <p role="alert" className="mt-2 text-sm text-amber">{photoMsg}</p>}
+        {photos.length > 0 && <p className="mt-2 text-sm text-white/60">{photos.length} photo{photos.length > 1 ? "s" : ""} ready to upload</p>}
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {photos.map((p, i) => (
             <div key={p.key} className="relative">
